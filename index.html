@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDCOL Loan Repayment Engine</title>
+<style>
+:root {
+  --navy: #0B1F3A;
+  --navy2: #162D4F;
+  --blue: #1A56B0;
+  --blue-lt: #E8F0FD;
+  --teal: #00695C;
+  --teal-lt: #E0F2F1;
+  --amber: #B45309;
+  --amber-lt: #FEF3C7;
+  --red: #9B1C1C;
+  --red-lt: #FEE2E2;
+  --gray1: #F1F5F9;
+  --gray2: #E2E8F0;
+  --gray3: #94A3B8;
+  --text: #1E293B;
+  --text2: #475569;
+  --white: #FFFFFF;
+  --border: #CBD5E1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray1);color:var(--text);font-size:12.5px;line-height:1.45}
+/* HEADER */
+#hdr{background:var(--navy);color:#fff;padding:0 18px;height:46px;display:flex;align-items:center;gap:18px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.hdr-brand{font-size:14px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.hdr-brand span{background:#1A56B0;padding:2px 7px;border-radius:3px;margin-right:8px;font-size:11px;letter-spacing:.08em}
+.hdr-controls{display:flex;gap:10px;align-items:center;margin-left:auto}
+.hdr-controls label{color:#94C3E8;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+.hdr-controls select{background:var(--navy2);color:#E2E8F0;border:1px solid #334D6E;border-radius:4px;padding:5px 10px;font-size:12px;cursor:pointer;min-width:210px}
+.hdr-controls select:focus{outline:2px solid #4B8FF4}
+.btn-gen{background:#1A56B0;color:#fff;border:none;border-radius:4px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.03em;white-space:nowrap}
+.btn-gen:hover{background:#2563EB}
+/* LAYOUT */
+#layout{display:flex;height:calc(100vh - 46px)}
+#sidebar{width:274px;min-width:260px;background:var(--white);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+#content{flex:1;overflow-y:auto;padding:16px}
+/* SIDEBAR */
+.sb-section{padding:12px 14px;border-bottom:1px solid var(--gray2)}
+.sb-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--gray3);margin-bottom:8px}
+.sb-loan-badge{background:var(--blue-lt);border-left:3px solid var(--blue);padding:8px 10px;border-radius:0 4px 4px 0;margin-bottom:4px}
+.sb-loan-name{font-size:13px;font-weight:700;color:var(--navy)}
+.sb-loan-sub{font-size:10.5px;color:var(--text2);margin-top:2px}
+.pill{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+.pill-annuity{background:#DBEAFE;color:#1D4ED8}
+.pill-level{background:#D1FAE5;color:#065F46}
+.pill-schedule{background:#FEF3C7;color:#92400E}
+.pill-unavail{background:#FEE2E2;color:#991B1B}
+/* PARAM ROWS */
+.pr{display:flex;flex-direction:column;margin-bottom:7px}
+.pr label{font-size:10px;color:var(--text2);font-weight:600;margin-bottom:2px}
+.pr input,.pr select{border:1px solid var(--border);border-radius:3px;padding:4px 7px;font-size:12px;color:var(--text);background:var(--white);width:100%}
+.pr input.inp-blue{color:#1D4ED8;font-weight:700}
+.pr input:focus,.pr select:focus{outline:2px solid var(--blue);border-color:var(--blue)}
+.pr-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+/* DRAWDOWN TABLE */
+.dd-table{width:100%;font-size:11px;border-collapse:collapse}
+.dd-table td{padding:3px 5px;border-bottom:1px solid var(--gray2)}
+.dd-table td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+/* ACTION BUTTONS */
+.sb-actions{padding:10px 14px;display:flex;flex-direction:column;gap:6px;margin-top:auto}
+.btn{border:none;border-radius:4px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;width:100%;text-align:center}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:#1D4ED8}
+.btn-success{background:var(--teal);color:#fff}
+.btn-success:hover{background:#00796B}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-amber:hover{background:#D97706}
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px}
+.tab{padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--text2);transition:all .12s}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab:hover:not(.active){color:var(--text)}
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stat{background:var(--white);border:1px solid var(--border);border-radius:5px;padding:10px 14px}
+.stat-lbl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.stat-val{font-size:17px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-sub{font-size:10px;color:var(--text2);margin-top:2px}
+/* CARD / TABLE */
+.card{background:var(--white);border:1px solid var(--border);border-radius:5px;overflow:hidden;margin-bottom:14px}
+.card-hdr{background:var(--navy2);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.card-hdr span{font-size:10px;color:#94C3E8;font-weight:400}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{background:var(--navy);color:#E2E8F0;padding:6px 10px;text-align:right;font-size:11px;font-weight:700;white-space:nowrap;position:sticky;top:0}
+th:first-child,th.left{text-align:left}
+td{padding:5px 10px;text-align:right;border-bottom:1px solid #F0F4F8;font-size:11.5px;white-space:nowrap}
+td:first-child,td.left{text-align:left}
+tr:nth-child(even) td{background:#F8FAFD}
+tr:hover td{background:#EFF6FF}
+tfoot td{background:var(--navy) !important;color:#fff;font-weight:700;border-top:2px solid #0B1F3A}
+.row-grace td{background:#FFFBEB !important;color:#78350F}
+.row-cap td{background:#FEF3C7 !important;color:#92400E}
+.row-final td{background:#F0FDF4 !important;color:#14532D;font-weight:700}
+.row-restr td{background:#EDE9FE !important;color:#4C1D95;font-weight:700}
+/* NOTICE */
+.notice{background:#FEF9C3;border:1px solid #FDE047;border-radius:4px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#713F12}
+.notice-red{background:#FEE2E2;border-color:#FCA5A5;color:#7F1D1D}
+/* WELCOME */
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;color:var(--text2);text-align:center;gap:8px}
+.welcome h2{font-size:20px;color:var(--navy);font-weight:800}
+.welcome p{font-size:13px}
+/* MODAL */
+#modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
+#modal-bg.open{display:flex}
+#modal{background:var(--white);border-radius:6px;width:400px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal-hdr{background:var(--navy2);color:#fff;padding:12px 16px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px}
+.modal-hdr button{background:none;border:none;color:#fff;font-size:16px;cursor:pointer}
+.modal-body{padding:16px;display:flex;flex-direction:column;gap:10px}
+.modal-footer{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.modal-footer .btn{width:auto;padding:7px 20px}
+.form-row{display:flex;flex-direction:column;gap:3px}
+.form-row label{font-size:11px;font-weight:600;color:var(--text2)}
+.form-row input,.form-row select{border:1px solid var(--border);border-radius:3px;padding:6px 8px;font-size:12.5px}
+/* RESTRUCTURE BANNER */
+.restr-banner{background:#EDE9FE;border:1px solid #A78BFA;border-radius:4px;padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:#4C1D95}
+.restr-banner strong{font-weight:800}
+</style>
+</head>
+<body>
+<div id="app">
+<header id="hdr">
+  <div class="hdr-brand"><span>IDCOL</span>Loan Repayment Schedule Engine</div>
+  <div class="hdr-controls">
+    <label>Entity</label>
+    <select id="selEntity" onchange="onEntityChange()">
+      <option value="">— Select Entity —</option>
+      <option value="EKCL">EKCL — Esquire Knit Composite Ltd</option>
+      <option value="IHL">IHL — Imperial Hospital Ltd</option>
+      <option value="SCBL">SCBL — Seven Circle Bangladesh Ltd</option>
+      <option value="QPSL">QPSL — QPS Ltd</option>
+      <option value="KZFL">KZFL — Solar Rooftop</option>
+      <option value="NSGL">NSGL</option>
+    </select>
+    <label>Version</label>
+    <select id="selVersion" onchange="onVersionChange()">
+      <option value="">— Select Entity First —</option>
+    </select>
+    <button class="btn-gen" onclick="onGenerate()">⚙ Generate Schedule</button>
+  </div>
+</header>
+
+<div id="layout">
+  <aside id="sidebar">
+    <div class="sb-section" id="sb-info">
+      <div style="color:var(--gray3);font-size:11px;text-align:center;padding:10px 0">Select entity to begin</div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-title">Loan Parameters</div>
+      <div id="sb-params"><div style="color:var(--gray3);font-size:11px">—</div></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-title">Drawdowns / Disbursements</div>
+      <div id="sb-drawdowns"><div style="color:var(--gray3);font-size:11px">—</div></div>
+    </div>
+    <div class="sb-actions">
+      <button class="btn btn-primary" onclick="onGenerate()">⚙ Generate Schedule</button>
+      <button class="btn btn-success" onclick="onSaveVersion()">💾 Save Current Version</button>
+      <button class="btn btn-amber" onclick="openRestructureModal()">↺ Restructure / Reschedule</button>
+    </div>
+  </aside>
+
+  <main id="content">
+    <div class="welcome" id="welcome">
+      <div style="font-size:48px">📊</div>
+      <h2>IDCOL Loan Repayment Engine</h2>
+      <p>Daily-basis accrual · Annuity · Level Principal · Interest Capitalization</p>
+      <p style="margin-top:6px">Select an <strong>Entity</strong> and <strong>Version</strong>, then click <strong>Generate Schedule</strong></p>
+    </div>
+    <div id="schedule-output" style="display:none"></div>
+  </main>
+</div>
+</div>
+
+<!-- RESTRUCTURE MODAL -->
+<div id="modal-bg">
+  <div id="modal">
+    <div class="modal-hdr">
+      <span>Create Restructuring / Rescheduling</span>
+      <button onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Effective Date (restructure date)</label>
+        <input type="date" id="r-date">
+      </div>
+      <div class="form-row">
+        <label>New Annual Interest Rate (%)</label>
+        <input type="number" id="r-rate" step="0.01" min="0" max="50">
+      </div>
+      <div class="form-row">
+        <label>New Number of Installments</label>
+        <input type="number" id="r-n" min="1" max="200">
+      </div>
+      <div class="form-row">
+        <label>Principal Type</label>
+        <select id="r-type">
+          <option value="annuity">Annuity (Level TDS)</option>
+          <option value="level">Level Principal</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Version Label</label>
+        <input type="text" id="r-label" placeholder="e.g. 2nd Restructuring Jun-26">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="applyRestructure()">Apply</button>
+      <button class="btn" style="background:var(--gray2);color:var(--text)" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========================================================================
+// LOAN DATA
+// ========================================================================
+const LOANS = {
+  EKCL: {
+    name: "Esquire Knit Composite Ltd",
+    versions: [
+      {
+        label: "Original (Oct-22)",
+        drawdowns: [
+          {date:"2022-12-26", amount:350000000, note:"Drawdown 1"},
+          {date:"2023-05-15", amount:277057493, note:"Drawdown 2"}
+        ],
+        rates: [{date:"2022-12-26", rate:0.05}],
+        gracePrincipalMonths: 12,
+        graceInterestMonths: 0,
+        capitalizeInterest: false,
+        principalType: "annuity",
+        installments: 28,
+        paymentDay: 15,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2022-10-23",
+        sanctionedAmount: 750000000,
+        notes: "28 quarterly installments from 15-Mar-24. Actual/360 basis. Two drawdowns."
+      },
+      {
+        label: "1st Restructured (Dec-25)",
+        isRestructure: true,
+        parentVersionIdx: 0,
+        restructureDate: "2025-12-15",
+        drawdowns: [
+          {date:"2022-12-26", amount:350000000, note:"Drawdown 1"},
+          {date:"2023-05-15", amount:277057493, note:"Drawdown 2"}
+        ],
+        rates: [{date:"2022-12-26", rate:0.05}],
+        gracePrincipalMonths: 12,
+        graceInterestMonths: 0,
+        capitalizeInterest: false,
+        principalType: "annuity",
+        installments: 36,
+        paymentDay: 15,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2022-10-23",
+        sanctionedAmount: 750000000,
+        notes: "Extended to 36 installments in 1st Restructuring Dec-25"
+      }
+    ]
+  },
+  IHL: {
+    name: "Imperial Hospital Ltd",
+    versions: [
+      {
+        label: "Original (Apr-17)",
+        drawdowns: [{date:"2018-01-18", amount:150000000, note:"Single Drawdown"}],
+        rates: [{date:"2018-01-18", rate:0.10}],
+        gracePrincipalMonths: 24,
+        graceInterestMonths: 24,
+        capitalizeInterest: true,
+        principalType: "annuity",
+        installments: 20,
+        paymentDay: 30,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2017-04-06",
+        sanctionedAmount: 182760435,
+        notes: "24-month moratorium with interest capitalization. Principal grows to ~182.7M. 20 quarterly installments from Mar-20."
+      },
+      {
+        label: "1st Restructured",
+        isRestructure: true,
+        parentVersionIdx: 0,
+        restructureDate: "2021-12-31",
+        drawdowns: [{date:"2018-01-18", amount:150000000, note:"Single Drawdown"}],
+        rates: [{date:"2018-01-18", rate:0.10}],
+        gracePrincipalMonths: 24,
+        graceInterestMonths: 24,
+        capitalizeInterest: true,
+        principalType: "annuity",
+        installments: 24,
+        paymentDay: 30,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2017-04-06",
+        sanctionedAmount: 182760435,
+        notes: "1st Restructuring. 24 new installments from Jan-22."
+      },
+      {
+        label: "2nd Restructured (Jun-22)",
+        isRestructure: true,
+        parentVersionIdx: 1,
+        restructureDate: "2022-06-30",
+        drawdowns: [{date:"2018-01-18", amount:150000000, note:"Single Drawdown"}],
+        rates: [{date:"2018-01-18", rate:0.10}],
+        gracePrincipalMonths: 24,
+        graceInterestMonths: 24,
+        capitalizeInterest: true,
+        principalType: "annuity",
+        installments: 28,
+        paymentDay: 30,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2017-04-06",
+        sanctionedAmount: 182760435,
+        notes: "2nd Restructuring Jun-22. 28 new installments."
+      }
+    ]
+  },
+  SCBL: {
+    name: "Seven Circle Bangladesh Ltd",
+    versions: [
+      {
+        label: "Original (Jun-19)",
+        drawdowns: [
+          {date:"2019-07-02", amount:580000000, note:"Tranche 1a"},
+          {date:"2019-07-02", amount:120000000, note:"Tranche 1b"},
+          {date:"2019-07-16", amount:1000000000, note:"Tranche 2"}
+        ],
+        rates: [
+          {date:"2019-07-02", rate:0.095},
+          {date:"2020-08-01", rate:0.090}
+        ],
+        gracePrincipalMonths: 18,
+        graceInterestMonths: 0,
+        capitalizeInterest: false,
+        principalType: "level",
+        installments: 34,
+        paymentDay: 15,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2019-06-10",
+        sanctionedAmount: 1700000000,
+        notes: "Schedule V of TLA. 34 level-principal installments of ~50M. Rate changed 9.5%→9.0% from Aug-20. 18-month moratorium."
+      },
+      {
+        label: "1st Restructured",
+        isRestructure: true,
+        parentVersionIdx: 0,
+        restructureDate: "2022-03-15",
+        drawdowns: [
+          {date:"2019-07-02", amount:580000000, note:"Tranche 1a"},
+          {date:"2019-07-02", amount:120000000, note:"Tranche 1b"},
+          {date:"2019-07-16", amount:1000000000, note:"Tranche 2"}
+        ],
+        rates: [
+          {date:"2019-07-02", rate:0.095},
+          {date:"2020-08-01", rate:0.090}
+        ],
+        gracePrincipalMonths: 18,
+        graceInterestMonths: 0,
+        capitalizeInterest: false,
+        principalType: "level",
+        installments: 28,
+        paymentDay: 15,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2019-06-10",
+        sanctionedAmount: 1700000000,
+        notes: "1st Restructuring Mar-22. 28 new installments."
+      },
+      {
+        label: "2nd Restructured",
+        isRestructure: true,
+        parentVersionIdx: 1,
+        restructureDate: "2023-09-15",
+        drawdowns: [
+          {date:"2019-07-02", amount:580000000},
+          {date:"2019-07-02", amount:120000000},
+          {date:"2019-07-16", amount:1000000000}
+        ],
+        rates: [
+          {date:"2019-07-02", rate:0.095},
+          {date:"2020-08-01", rate:0.090}
+        ],
+        gracePrincipalMonths: 18,
+        graceInterestMonths: 0,
+        capitalizeInterest: false,
+        principalType: "level",
+        installments: 24,
+        paymentDay: 15,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2019-06-10",
+        sanctionedAmount: 1700000000,
+        notes: "2nd Restructuring Sep-23. 24 new installments."
+      }
+    ]
+  },
+  QPSL: {
+    name: "QPS Ltd",
+    versions: [
+      {
+        label: "Original",
+        drawdowns: [
+          {date:"2010-05-15", amount:100000000, note:"Disbursement 1"},
+          {date:"2010-06-30", amount:80000000,  note:"Disbursement 2"},
+          {date:"2010-07-31", amount:90000000,  note:"Disbursement 3"},
+          {date:"2010-08-31", amount:80000000,  note:"Disbursement 4"},
+          {date:"2010-09-30", amount:100000000, note:"Disbursement 5"},
+          {date:"2010-10-31", amount:80000000,  note:"Disbursement 6"},
+          {date:"2010-11-30", amount:100000000, note:"Disbursement 7"},
+          {date:"2010-12-31", amount:90000000,  note:"Disbursement 8"},
+          {date:"2011-01-05", amount:90000000,  note:"Disbursement 9"},
+          {date:"2011-01-15", amount:90000000,  note:"Disbursement 10"}
+        ],
+        rates: [
+          {date:"2010-05-15", rate:0.12},
+          {date:"2011-01-01", rate:0.13}
+        ],
+        gracePrincipalMonths: 15,
+        graceInterestMonths: 12,
+        capitalizeInterest: false,
+        principalType: "level",
+        installments: 48,
+        paymentDay: 1,
+        paymentMonths: [1,4,7,10],
+        currency: "BDT",
+        agreementDate: "2010-03-01",
+        sanctionedAmount: 1000000000,
+        notes: "48 quarterly level-principal installments. Rate 12%→13% from Jan-11. Principal grace 15M, interest grace 12M."
+      },
+      {
+        label: "3rd Rescheduling (Jan-14)",
+        isRestructure: true,
+        parentVersionIdx: 0,
+        restructureDate: "2014-01-01",
+        drawdowns: [
+          {date:"2010-05-15", amount:100000000},{date:"2010-06-30", amount:80000000},
+          {date:"2010-07-31", amount:90000000},{date:"2010-08-31", amount:80000000},
+          {date:"2010-09-30", amount:100000000},{date:"2010-10-31", amount:80000000},
+          {date:"2010-11-30", amount:100000000},{date:"2010-12-31", amount:90000000},
+          {date:"2011-01-05", amount:90000000},{date:"2011-01-15", amount:90000000}
+        ],
+        rates: [{date:"2010-05-15", rate:0.12},{date:"2011-01-01", rate:0.13}],
+        gracePrincipalMonths: 15,
+        graceInterestMonths: 12,
+        capitalizeInterest: false,
+        principalType: "level",
+        installments: 20,
+        paymentDay: 1,
+        paymentMonths: [1,4,7,10],
+        currency: "BDT",
+        agreementDate: "2010-03-01",
+        sanctionedAmount: 1000000000,
+        notes: "3rd Rescheduling from Jan-14. 20 new installments."
+      },
+      {
+        label: "4th Rescheduling (Jan-15)",
+        isRestructure: true,
+        parentVersionIdx: 1,
+        restructureDate: "2015-01-01",
+        drawdowns: [
+          {date:"2010-05-15", amount:100000000},{date:"2010-06-30", amount:80000000},
+          {date:"2010-07-31", amount:90000000},{date:"2010-08-31", amount:80000000},
+          {date:"2010-09-30", amount:100000000},{date:"2010-10-31", amount:80000000},
+          {date:"2010-11-30", amount:100000000},{date:"2010-12-31", amount:90000000},
+          {date:"2011-01-05", amount:90000000},{date:"2011-01-15", amount:90000000}
+        ],
+        rates: [{date:"2010-05-15", rate:0.12},{date:"2011-01-01", rate:0.13}],
+        gracePrincipalMonths: 15,
+        graceInterestMonths: 12,
+        capitalizeInterest: false,
+        principalType: "level",
+        installments: 16,
+        paymentDay: 1,
+        paymentMonths: [1,4,7,10],
+        currency: "BDT",
+        agreementDate: "2010-03-01",
+        sanctionedAmount: 1000000000,
+        notes: "4th Rescheduling from Jan-15. 16 new installments."
+      }
+    ]
+  },
+  KZFL: {
+    name: "KZFL Solar Rooftop",
+    versions: [
+      {
+        label: "Original (Estimated)",
+        drawdowns: [{date:"2019-03-01", amount:50000000, note:"Estimated — source file unavailable"}],
+        rates: [{date:"2019-03-01", rate:0.06}],
+        gracePrincipalMonths: 6,
+        graceInterestMonths: 0,
+        capitalizeInterest: false,
+        principalType: "level",
+        installments: 20,
+        paymentDay: 15,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2018-12-01",
+        sanctionedAmount: 50000000,
+        notes: "⚠ SOURCE FILE UNAVAILABLE — Parameters are estimates. Please update with actual values.",
+        dataUnavailable: true
+      }
+    ]
+  },
+  NSGL: {
+    name: "NSGL",
+    versions: [
+      {
+        label: "Original (Estimated)",
+        drawdowns: [{date:"2019-06-01", amount:100000000, note:"Estimated — source file unavailable"}],
+        rates: [{date:"2019-06-01", rate:0.07}],
+        gracePrincipalMonths: 12,
+        graceInterestMonths: 0,
+        capitalizeInterest: false,
+        principalType: "level",
+        installments: 20,
+        paymentDay: 15,
+        paymentMonths: [3,6,9,12],
+        currency: "BDT",
+        agreementDate: "2019-03-01",
+        sanctionedAmount: 100000000,
+        notes: "⚠ SOURCE FILE UNAVAILABLE — Parameters are estimates. Please update with actual values.",
+        dataUnavailable: true
+      }
+    ]
+  }
+};
+
+// ========================================================================
+// UTILITIES
+// ========================================================================
+function daysBetween(d1, d2) {
+  const t1 = new Date(d1 instanceof Date ? d1.toISOString().slice(0,10) : d1).getTime();
+  const t2 = new Date(d2 instanceof Date ? d2.toISOString().slice(0,10) : d2).getTime();
+  return Math.round((t2 - t1) / 86400000);
+}
+
+function addMonths(dateStr, m) {
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() + m);
+  return d;
+}
+
+function toISO(d) {
+  if (!d) return '';
+  const dt = d instanceof Date ? d : new Date(d);
+  return dt.toISOString().slice(0, 10);
+}
+
+const MNAME = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = d instanceof Date ? d : new Date(d);
+  return `${dt.getDate()}-${MNAME[dt.getMonth()]}-${dt.getFullYear()}`;
+}
+
+function fmtQtr(d) {
+  const dt = d instanceof Date ? d : new Date(d);
+  const q = Math.ceil((dt.getMonth()+1)/3);
+  return `Q${q} ${dt.getFullYear()}`;
+}
+
+function precedingBD(d) {
+  const dt = new Date(d);
+  while (dt.getDay() === 0 || dt.getDay() === 6) dt.setDate(dt.getDate() - 1);
+  return dt;
+}
+
+function getRateAt(rates, dateStr) {
+  const d = new Date(dateStr);
+  let r = rates[0].rate;
+  for (const x of rates) { if (new Date(x.date) <= d) r = x.rate; }
+  return r;
+}
+
+function N(n, dec=0) {
+  if (n == null || isNaN(n)) return '—';
+  if (Math.abs(n) < 0.005 && dec === 0) return '—';
+  const s = Math.abs(n).toFixed(dec).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return n < 0 ? `(${s})` : s;
+}
+
+function NM(n) { return N(n/1000000, 2) + 'M'; }
+
+function pct(r) { return (r * 100).toFixed(2) + '%'; }
+
+function generatePaymentDates(afterDate, day, months, count) {
+  const dates = [];
+  const start = new Date(afterDate);
+  let year = start.getFullYear();
+  outer:
+  for (let y = year; y <= year + 60; y++) {
+    for (const m of months) {
+      const maxDay = new Date(y, m, 0).getDate();
+      const d = new Date(y, m - 1, Math.min(day, maxDay));
+      if (d > start) {
+        dates.push(precedingBD(d));
+        if (dates.length >= count) break outer;
+      }
+    }
+  }
+  return dates;
+}
+
+// ========================================================================
+// ENGINE
+// ========================================================================
+function calcAnnuityTDS(balance, annualRate, paymentDates, startDateStr) {
+  if (!paymentDates.length) return 0;
+  const n = paymentDates.length;
+  const periodRates = [];
+  let prev = startDateStr;
+  for (const d of paymentDates) {
+    const ds = toISO(d);
+    const days = daysBetween(prev, ds);
+    periodRates.push(annualRate * days / 360);
+    prev = ds;
+  }
+  // compound products: products[j] = ∏(1+ri) for i=0..j-1
+  const prod = [1];
+  for (let i = 0; i < n; i++) prod.push(prod[i] * (1 + periodRates[i]));
+  // denominator = sum of 1/prod[j+1]
+  let denom = 0;
+  for (let j = 0; j < n; j++) denom += 1 / prod[j + 1];
+  return balance / denom;
+}
+
+function computeOriginalSchedule(params) {
+  const {drawdowns, rates, gracePrincipalMonths, graceInterestMonths,
+    capitalizeInterest, principalType, installments, paymentDay, paymentMonths} = params;
+
+  const sorted = [...drawdowns].sort((a,b) => new Date(a.date)-new Date(b.date));
+  const firstDD = sorted[0].date;
+  const gracePeriod = Math.max(gracePrincipalMonths, graceInterestMonths);
+  const graceEnd = toISO(addMonths(firstDD, gracePeriod));
+
+  const accrualRows = [];
+  let balAtGraceEnd = 0;
+
+  if (capitalizeInterest) {
+    // Accumulate all drawdowns, then capitalize interest monthly
+    let bal = sorted.reduce((s, d) => s + d.amount, 0);
+    let cur = firstDD;
+    while (cur < graceEnd) {
+      const next = toISO(addMonths(cur, 1));
+      const end = next > graceEnd ? graceEnd : next;
+      const days = daysBetween(cur, end);
+      if (days <= 0) break;
+      const rate = getRateAt(rates, cur);
+      const interest = bal * rate * days / 360;
+      accrualRows.push({
+        period: fmtDate(new Date(cur)), monthEnd: fmtDate(new Date(end)),
+        type: 'Moratorium (Capitalize)', openingBalance: bal, days,
+        rate, interestAccrued: interest, principalPaid: 0, interestPaid: 0,
+        closingBalance: bal + interest, isGrace: true, isCap: true
+      });
+      bal += interest;
+      cur = end;
+    }
+    balAtGraceEnd = bal;
+
+  } else {
+    // All drawdowns made, interest paid during grace
+    let totalDD = sorted.reduce((s, d) => s + d.amount, 0);
+    balAtGraceEnd = totalDD;
+
+    if (graceInterestMonths === 0 && gracePrincipalMonths > 0) {
+      // Interest-only payments during grace
+      const gracePmtDates = generatePaymentDates(firstDD, paymentDay, paymentMonths, 20)
+        .filter(d => toISO(d) <= graceEnd);
+
+      let prev = firstDD;
+      for (const pd of gracePmtDates) {
+        const pdStr = toISO(pd);
+        // Calc interest with mid-period drawdowns
+        let interest = 0;
+        let segStart = prev;
+        let segBal = 0;
+        for (const dd of sorted) { if (dd.date <= prev) segBal += dd.amount; }
+        for (const dd of sorted) {
+          if (dd.date > prev && dd.date < pdStr) {
+            const seg = daysBetween(segStart, dd.date);
+            if (seg > 0) interest += segBal * getRateAt(rates, segStart) * seg / 360;
+            segBal += dd.amount;
+            segStart = dd.date;
+          }
+        }
+        const lastSeg = daysBetween(segStart, pdStr);
+        if (lastSeg > 0) interest += segBal * getRateAt(rates, segStart) * lastSeg / 360;
+
+        accrualRows.push({
+          period: fmtDate(pd), monthEnd: fmtDate(pd), type: 'Grace (Int. Only)',
+          openingBalance: segBal, days: daysBetween(prev, pdStr), rate: getRateAt(rates, prev),
+          interestAccrued: interest, principalPaid: 0, interestPaid: interest,
+          closingBalance: segBal, isGrace: true, isCap: false
+        });
+        prev = pdStr;
+      }
+    }
+  }
+
+  // ---- REPAYMENT SCHEDULE ----
+  const repDates = generatePaymentDates(graceEnd, paymentDay, paymentMonths, installments);
+  const newRate = getRateAt(rates, graceEnd);
+  let tds = 0;
+  if (principalType === 'annuity') {
+    tds = calcAnnuityTDS(balAtGraceEnd, newRate, repDates, graceEnd);
+  }
+  const levelPrin = balAtGraceEnd / installments;
+
+  let bal = balAtGraceEnd;
+  let prev = graceEnd;
+  const schedRows = [];
+  let cumP = 0, cumI = 0, cumTDS = 0;
+
+  for (let i = 0; i < repDates.length; i++) {
+    const pd = repDates[i];
+    const pdStr = toISO(pd);
+    const days = daysBetween(prev, pdStr);
+    const rate = getRateAt(rates, pdStr);
+    const interest = bal * rate * days / 360;
+    const isLast = i === repDates.length - 1;
+
+    let principal;
+    if (isLast) {
+      principal = bal;
+    } else if (principalType === 'annuity') {
+      principal = tds - interest;
+      if (principal < 0) principal = 0;
+      if (principal > bal) principal = bal;
+    } else {
+      principal = levelPrin;
+      if (principal > bal) principal = bal;
+    }
+
+    const actualTDS = interest + principal;
+    cumP += principal; cumI += interest; cumTDS += actualTDS;
+    const closing = bal - principal;
+
+    schedRows.push({
+      no: i+1, date: pd, dateStr: pdStr, qtr: fmtQtr(pd), days, rate,
+      openingBalance: bal, interest, principal, tds: actualTDS,
+      closingBalance: closing, cumP, cumI, cumTDS, isLast
+    });
+    accrualRows.push({
+      period: fmtDate(pd), monthEnd: fmtDate(pd), type: 'Repayment',
+      openingBalance: bal, days, rate, interestAccrued: interest,
+      principalPaid: principal, interestPaid: interest, closingBalance: closing,
+      isGrace: false, isCap: false
+    });
+
+    bal = closing;
+    prev = pdStr;
+  }
+
+  return {
+    schedRows, accrualRows, openingBalance: balAtGraceEnd,
+    totalPrincipal: cumP, totalInterest: cumI, totalTDS: cumTDS,
+    annuityTDS: principalType === 'annuity' ? tds : null,
+    repDates, graceEnd, firstDD: sorted[0].date, balAtGraceEnd
+  };
+}
+
+// versions = LOANS[entity].versions array, needed for chained restructuring
+function computeSchedule(params, versions) {
+  if (!params.isRestructure) return computeOriginalSchedule(params);
+
+  // Find the parent version to base the outstanding-balance calculation on
+  const parentIdx = params.parentVersionIdx !== undefined ? params.parentVersionIdx : 0;
+  const parentParams = versions ? versions[parentIdx] : {...params, isRestructure: false};
+
+  // Recursively compute the parent's schedule (handles multi-level chains)
+  const base = computeSchedule(parentParams, versions);
+  const rDate = params.restructureDate;
+
+  // Outstanding balance = closing balance of last scheduled payment on or before rDate
+  let outstandingBal = base.balAtGraceEnd;
+  for (const row of base.schedRows) {
+    if (row.dateStr <= rDate) outstandingBal = row.closingBalance;
+  }
+
+  // Generate the new post-restructure schedule
+  const newPar = {
+    ...params,
+    isRestructure: false,
+    drawdowns: [{date: rDate, amount: outstandingBal, note: `Outstanding at restructure (${fmtDate(new Date(rDate))})`}],
+    gracePrincipalMonths: 0,
+    graceInterestMonths: 0,
+    capitalizeInterest: false
+  };
+  const newRes = computeOriginalSchedule(newPar);
+
+  return {
+    ...newRes,
+    isRestructure: true,
+    restructureDate: rDate,
+    outstandingAtRestructure: outstandingBal,
+    preRows: base.schedRows.filter(r => r.dateStr <= rDate),
+    baseResult: base
+  };
+}
+
+// ========================================================================
+// STATE
+// ========================================================================
+let state = {
+  entity: null,
+  versionIdx: 0,
+  params: null,
+  result: null,
+  activeTab: 'schedule',
+  savedVersions: {},
+  editedVersions: {}
+};
+
+function getCurrentParams() {
+  if (!state.entity) return null;
+  const loan = LOANS[state.entity];
+  const ver = loan.versions[state.versionIdx];
+  // Merge with any edits
+  const key = `${state.entity}-${state.versionIdx}`;
+  const edits = state.editedVersions[key] || {};
+  return {...ver, ...edits};
+}
+
+// ========================================================================
+// SIDEBAR RENDERING
+// ========================================================================
+function renderSidebar() {
+  if (!state.entity) return;
+  const loan = LOANS[state.entity];
+  const params = getCurrentParams();
+  if (!params) return;
+
+  // Loan info
+  const pillClass = params.principalType === 'annuity' ? 'pill-annuity' :
+                    params.principalType === 'level'   ? 'pill-level'   : 'pill-schedule';
+  document.getElementById('sb-info').innerHTML = `
+    <div class="sb-loan-badge">
+      <div class="sb-loan-name">${state.entity} — ${loan.name}</div>
+      <div class="sb-loan-sub">Agreement: ${params.agreementDate ? fmtDate(new Date(params.agreementDate)) : '—'}</div>
+      <div class="sb-loan-sub">Sanctioned: ${NM(params.sanctionedAmount)}</div>
+      <span class="pill ${pillClass}">${params.principalType}</span>
+      ${params.dataUnavailable ? '<span class="pill pill-unavail">⚠ Estimated</span>' : ''}
+    </div>`;
+
+  // Parameters form
+  const key = `${state.entity}-${state.versionIdx}`;
+  document.getElementById('sb-params').innerHTML = `
+    <div class="pr">
+      <label>Annual Interest Rate (%)</label>
+      <input class="inp-blue" type="number" id="p-rate" step="0.01" value="${(getRateAt(params.rates, new Date().toISOString().slice(0,10)) * 100).toFixed(2)}" onchange="onParamChange('rate', this.value/100)">
+    </div>
+    <div class="pr-row">
+      <div class="pr">
+        <label>Installments</label>
+        <input class="inp-blue" type="number" id="p-n" value="${params.installments}" min="1" onchange="onParamChange('installments', +this.value)">
+      </div>
+      <div class="pr">
+        <label>Principal Type</label>
+        <select id="p-type" onchange="onParamChange('principalType', this.value)">
+          <option value="annuity" ${params.principalType==='annuity'?'selected':''}>Annuity</option>
+          <option value="level"   ${params.principalType==='level'  ?'selected':''}>Level Principal</option>
+        </select>
+      </div>
+    </div>
+    <div class="pr-row">
+      <div class="pr">
+        <label>Principal Grace (mo)</label>
+        <input class="inp-blue" type="number" id="p-gp" value="${params.gracePrincipalMonths}" min="0" onchange="onParamChange('gracePrincipalMonths', +this.value)">
+      </div>
+      <div class="pr">
+        <label>Interest Grace (mo)</label>
+        <input class="inp-blue" type="number" id="p-gi" value="${params.graceInterestMonths}" min="0" onchange="onParamChange('graceInterestMonths', +this.value)">
+      </div>
+    </div>
+    <div class="pr-row">
+      <div class="pr">
+        <label>Payment Day</label>
+        <input class="inp-blue" type="number" id="p-day" value="${params.paymentDay}" min="1" max="31" onchange="onParamChange('paymentDay', +this.value)">
+      </div>
+      <div class="pr">
+        <label>Capitalize Int.</label>
+        <select id="p-cap" onchange="onParamChange('capitalizeInterest', this.value==='true')">
+          <option value="false" ${!params.capitalizeInterest?'selected':''}>No</option>
+          <option value="true"  ${params.capitalizeInterest ?'selected':''}>Yes</option>
+        </select>
+      </div>
+    </div>
+    <div class="pr">
+      <label>Payment Months</label>
+      <input type="text" id="p-months" value="${params.paymentMonths.join(',')}" onchange="onParamChange('paymentMonths', this.value.split(',').map(Number))">
+    </div>
+    ${params.notes ? `<div style="font-size:10.5px;color:var(--text2);margin-top:6px;padding:6px 8px;background:var(--gray1);border-radius:3px">${params.notes}</div>` : ''}
+  `;
+
+  // Drawdowns
+  const ddRows = params.drawdowns.map((d, i) => `
+    <tr>
+      <td>${fmtDate(new Date(d.date))}</td>
+      <td>${d.note || `DD${i+1}`}</td>
+      <td>${NM(d.amount)}</td>
+    </tr>`).join('');
+  const total = params.drawdowns.reduce((s,d) => s + d.amount, 0);
+  document.getElementById('sb-drawdowns').innerHTML = `
+    <table class="dd-table">
+      <thead><tr><td><b>Date</b></td><td><b>Note</b></td><td style="text-align:right"><b>Amount</b></td></tr></thead>
+      <tbody>${ddRows}</tbody>
+      <tfoot><tr><td colspan="2"><b>Total</b></td><td>${NM(total)}</td></tr></tfoot>
+    </table>`;
+}
+
+function onParamChange(key, value) {
+  const k = `${state.entity}-${state.versionIdx}`;
+  if (!state.editedVersions[k]) state.editedVersions[k] = {};
+  if (key === 'rate') {
+    // Update the first rate entry
+    const params = getCurrentParams();
+    state.editedVersions[k].rates = params.rates.map((r, i) => i === 0 ? {...r, rate: value} : r);
+  } else {
+    state.editedVersions[k][key] = value;
+  }
+}
+
+// ========================================================================
+// SCHEDULE RENDERING
+// ========================================================================
+function renderStats(result, params) {
+  const totalDD = params.drawdowns.reduce((s,d) => s + d.amount, 0);
+  const tdsLabel = params.principalType === 'annuity' ? `TDS: ${N(result.annuityTDS)}` : '';
+  return `<div class="stats-grid">
+    <div class="stat">
+      <div class="stat-lbl">Outstanding at Repayment</div>
+      <div class="stat-val">${NM(result.openingBalance)}</div>
+      <div class="stat-sub">Total drawn: ${NM(totalDD)}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Total Principal</div>
+      <div class="stat-val">${NM(result.totalPrincipal)}</div>
+      <div class="stat-sub">${params.installments} installments</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Total Interest</div>
+      <div class="stat-val">${NM(result.totalInterest)}</div>
+      <div class="stat-sub">Actual/360 basis</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Total Debt Service</div>
+      <div class="stat-val">${NM(result.totalTDS)}</div>
+      <div class="stat-sub">${tdsLabel}</div>
+    </div>
+  </div>`;
+}
+
+function renderScheduleTable(result, params) {
+  const isRestr = result.isRestructure;
+  let html = '';
+
+  if (isRestr) {
+    html += `<div class="restr-banner">
+      ↺ Restructuring effective <strong>${fmtDate(new Date(result.restructureDate))}</strong> —
+      outstanding balance carried forward: <strong>${N(result.outstandingAtRestructure)}</strong> BDT
+      | Original ${result.preRows.length} installments shown below
+    </div>`;
+    // Pre-restructure rows
+    html += `<div class="card">
+      <div class="card-hdr">Pre-Restructure Schedule <span>${result.preRows.length} installments paid/due before restructuring</span></div>
+      <div class="tbl-wrap">${buildScheduleTbl(result.preRows, true)}</div>
+    </div>`;
+    html += `<div class="card">
+      <div class="card-hdr">Post-Restructure Repayment Schedule <span>${params.installments} new installments</span></div>
+      <div class="tbl-wrap">${buildScheduleTbl(result.schedRows, false)}</div>
+    </div>`;
+  } else {
+    html += `<div class="card">
+      <div class="card-hdr">Repayment Schedule <span>${params.installments} quarterly installments · ${params.principalType} · Actual/360</span></div>
+      <div class="tbl-wrap">${buildScheduleTbl(result.schedRows, false)}</div>
+    </div>`;
+  }
+  return html;
+}
+
+function buildScheduleTbl(rows, dimmed) {
+  if (!rows || !rows.length) return '<div style="padding:14px;color:var(--gray3);text-align:center">No data</div>';
+  const head = `<thead><tr>
+    <th class="left">No.</th>
+    <th class="left">Payment Date</th>
+    <th class="left">Quarter</th>
+    <th>Days</th>
+    <th>Rate</th>
+    <th>Opening Balance</th>
+    <th>Interest</th>
+    <th>Principal</th>
+    <th>Total Debt Service</th>
+    <th>Closing Balance</th>
+    <th>Cum. Principal</th>
+    <th>Cum. Interest</th>
+  </tr></thead>`;
+
+  let totP=0, totI=0, totTDS=0;
+  const trs = rows.map(r => {
+    totP += r.principal; totI += r.interest; totTDS += r.tds;
+    const cls = r.isLast ? 'row-final' : (dimmed ? 'row-restr' : '');
+    return `<tr class="${cls}">
+      <td class="left">${r.no}</td>
+      <td class="left">${fmtDate(r.date)}</td>
+      <td class="left">${r.qtr || fmtQtr(r.date)}</td>
+      <td>${r.days}</td>
+      <td>${pct(r.rate)}</td>
+      <td>${N(r.openingBalance)}</td>
+      <td>${N(r.interest)}</td>
+      <td>${N(r.principal)}</td>
+      <td>${N(r.tds)}</td>
+      <td>${N(r.closingBalance)}</td>
+      <td>${N(r.cumP)}</td>
+      <td>${N(r.cumI)}</td>
+    </tr>`;
+  }).join('');
+
+  const foot = `<tfoot><tr>
+    <td class="left" colspan="5">TOTAL</td>
+    <td>—</td>
+    <td>${N(totI)}</td>
+    <td>${N(totP)}</td>
+    <td>${N(totTDS)}</td>
+    <td>—</td>
+    <td>—</td>
+    <td>—</td>
+  </tr></tfoot>`;
+
+  return `<table>${head}<tbody>${trs}</tbody>${foot}</table>`;
+}
+
+function renderAccrualTable(result) {
+  const rows = result.accrualRows;
+  if (!rows || !rows.length) return '<div style="padding:14px;color:var(--gray3)">No accrual data</div>';
+
+  const head = `<thead><tr>
+    <th class="left">Period</th>
+    <th class="left">Type</th>
+    <th>Days</th>
+    <th>Rate</th>
+    <th>Opening Balance</th>
+    <th>Interest Accrued</th>
+    <th>Principal Paid</th>
+    <th>Interest Paid</th>
+    <th>Closing Balance</th>
+  </tr></thead>`;
+
+  const trs = rows.map(r => {
+    const cls = r.isCap ? 'row-cap' : r.isGrace ? 'row-grace' : '';
+    return `<tr class="${cls}">
+      <td class="left">${r.period}</td>
+      <td class="left">${r.type}</td>
+      <td>${r.days}</td>
+      <td>${pct(r.rate)}</td>
+      <td>${N(r.openingBalance)}</td>
+      <td>${N(r.interestAccrued)}</td>
+      <td>${N(r.principalPaid)}</td>
+      <td>${N(r.interestPaid)}</td>
+      <td>${N(r.closingBalance)}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="card">
+    <div class="card-hdr">Daily-Basis Accrual Table
+      <span>
+        <span style="display:inline-block;width:10px;height:10px;background:#FEF3C7;margin-right:4px"></span>Capitalized
+        <span style="display:inline-block;width:10px;height:10px;background:#FFFBEB;margin:0 4px 0 10px"></span>Grace / Int-Only
+      </span>
+    </div>
+    <div class="tbl-wrap"><table>${head}<tbody>${trs}</tbody></table></div>
+  </div>`;
+}
+
+function renderInfo(params) {
+  const rateRows = params.rates.map(r =>
+    `<tr><td>${fmtDate(new Date(r.date))}</td><td>${pct(r.rate)}</td></tr>`).join('');
+  const ddRows = params.drawdowns.map(d =>
+    `<tr><td>${fmtDate(new Date(d.date))}</td><td>${d.note||''}</td><td>${N(d.amount)}</td></tr>`).join('');
+
+  return `<div class="card">
+    <div class="card-hdr">Loan Information</div>
+    <div style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <div>
+        <div class="sb-title" style="margin-bottom:8px">Key Terms</div>
+        <table class="dd-table"><tbody>
+          <tr><td>Agreement Date</td><td>${fmtDate(new Date(params.agreementDate))}</td></tr>
+          <tr><td>Sanctioned Amount</td><td>${NM(params.sanctionedAmount)}</td></tr>
+          <tr><td>Principal Type</td><td>${params.principalType}</td></tr>
+          <tr><td>Installments</td><td>${params.installments} quarterly</td></tr>
+          <tr><td>Payment Day</td><td>${params.paymentDay}th of ${params.paymentMonths.map(m=>MNAME[m-1]).join('/')}</td></tr>
+          <tr><td>Principal Grace</td><td>${params.gracePrincipalMonths} months</td></tr>
+          <tr><td>Interest Grace</td><td>${params.graceInterestMonths} months</td></tr>
+          <tr><td>Capitalize Int.</td><td>${params.capitalizeInterest ? 'Yes' : 'No'}</td></tr>
+          <tr><td>Interest Basis</td><td>Actual/360</td></tr>
+        </tbody></table>
+      </div>
+      <div>
+        <div class="sb-title" style="margin-bottom:8px">Interest Rates</div>
+        <table class="dd-table"><thead><tr><td><b>From Date</b></td><td><b>Rate</b></td></tr></thead>
+        <tbody>${rateRows}</tbody></table>
+        <div class="sb-title" style="margin-top:12px;margin-bottom:8px">Drawdowns</div>
+        <table class="dd-table"><thead><tr><td><b>Date</b></td><td><b>Note</b></td><td><b>Amount</b></td></tr></thead>
+        <tbody>${ddRows}</tbody></table>
+      </div>
+    </div>
+    ${params.notes ? `<div style="padding:0 14px 14px;font-size:11px;color:var(--text2)">${params.notes}</div>` : ''}
+  </div>`;
+}
+
+function renderOutput(result, params) {
+  const area = document.getElementById('schedule-output');
+  const notice = params.dataUnavailable
+    ? `<div class="notice notice-red">⚠ Source file unavailable for ${state.entity}. Parameters below are estimates — please update before use.</div>`
+    : '';
+
+  const tabs = `<div class="tabs">
+    <div class="tab ${state.activeTab==='schedule'?'active':''}" onclick="switchTab('schedule')">Repayment Schedule</div>
+    <div class="tab ${state.activeTab==='accrual' ?'active':''}" onclick="switchTab('accrual')">Accrual Table</div>
+    <div class="tab ${state.activeTab==='info'    ?'active':''}" onclick="switchTab('info')">Loan Info</div>
+  </div>`;
+
+  let content = '';
+  if (state.activeTab === 'schedule') content = renderScheduleTable(result, params);
+  else if (state.activeTab === 'accrual') content = renderAccrualTable(result);
+  else content = renderInfo(params);
+
+  area.innerHTML = notice + renderStats(result, params) + tabs + content;
+  area.style.display = 'block';
+  document.getElementById('welcome').style.display = 'none';
+}
+
+// ========================================================================
+// EVENT HANDLERS
+// ========================================================================
+function onEntityChange() {
+  const entity = document.getElementById('selEntity').value;
+  state.entity = entity || null;
+  state.versionIdx = 0;
+  state.result = null;
+
+  const sel = document.getElementById('selVersion');
+  if (!entity) {
+    sel.innerHTML = '<option value="">— Select Entity First —</option>';
+    document.getElementById('sb-info').innerHTML = '<div style="color:var(--gray3);font-size:11px;text-align:center;padding:10px 0">Select entity to begin</div>';
+    document.getElementById('sb-params').innerHTML = '<div style="color:var(--gray3);font-size:11px">—</div>';
+    document.getElementById('sb-drawdowns').innerHTML = '<div style="color:var(--gray3);font-size:11px">—</div>';
+    return;
+  }
+
+  const loan = LOANS[entity];
+  sel.innerHTML = loan.versions.map((v, i) =>
+    `<option value="${i}">${v.label}</option>`).join('');
+  renderSidebar();
+}
+
+function onVersionChange() {
+  state.versionIdx = +document.getElementById('selVersion').value || 0;
+  state.result = null;
+  renderSidebar();
+}
+
+function onGenerate() {
+  if (!state.entity) { alert('Please select an entity first.'); return; }
+  const params = getCurrentParams();
+  if (!params) return;
+  try {
+    const versions = LOANS[state.entity].versions;
+    const result = computeSchedule(params, versions);
+    state.result = result;
+    renderOutput(result, params);
+  } catch(e) {
+    document.getElementById('schedule-output').innerHTML = `<div class="notice notice-red">Error generating schedule: ${e.message}<br><small>${e.stack||''}</small></div>`;
+    document.getElementById('schedule-output').style.display = 'block';
+    document.getElementById('welcome').style.display = 'none';
+    console.error(e);
+  }
+}
+
+function switchTab(tab) {
+  state.activeTab = tab;
+  if (state.result) renderOutput(state.result, getCurrentParams());
+}
+
+function onSaveVersion() {
+  if (!state.entity || !state.result) { alert('Generate a schedule first.'); return; }
+  const label = prompt('Enter a label for this saved version:', `Saved ${new Date().toLocaleDateString()}`);
+  if (!label) return;
+  const key = `${state.entity}-${state.versionIdx}`;
+  if (!state.savedVersions[state.entity]) state.savedVersions[state.entity] = [];
+  state.savedVersions[state.entity].push({
+    label, params: getCurrentParams(), result: state.result,
+    savedAt: new Date().toISOString()
+  });
+  alert(`Version "${label}" saved. You can view saved versions from the entity dropdown.`);
+}
+
+function openRestructureModal() {
+  if (!state.entity) { alert('Select an entity first.'); return; }
+  const params = getCurrentParams();
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('r-date').value = today;
+  document.getElementById('r-rate').value = (getRateAt(params.rates, today) * 100).toFixed(2);
+  document.getElementById('r-n').value = params.installments;
+  document.getElementById('r-type').value = params.principalType;
+  document.getElementById('r-label').value = '';
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+function applyRestructure() {
+  const rDate = document.getElementById('r-date').value;
+  const rRate = parseFloat(document.getElementById('r-rate').value) / 100;
+  const rN = parseInt(document.getElementById('r-n').value);
+  const rType = document.getElementById('r-type').value;
+  const rLabel = document.getElementById('r-label').value || `Restructuring ${fmtDate(new Date(rDate))}`;
+
+  if (!rDate || !rRate || !rN) { alert('Please fill all fields.'); return; }
+
+  const params = getCurrentParams();
+  const newVersion = {
+    ...params,
+    label: rLabel,
+    isRestructure: true,
+    parentVersionIdx: state.versionIdx,
+    restructureDate: rDate,
+    rates: [...params.rates, {date: rDate, rate: rRate}],
+    installments: rN,
+    principalType: rType,
+    gracePrincipalMonths: 0,
+    graceInterestMonths: 0,
+    capitalizeInterest: false,
+    notes: `Restructured on ${fmtDate(new Date(rDate))}. New rate: ${pct(rRate)}, ${rN} installments, ${rType} structure.`
+  };
+
+  LOANS[state.entity].versions.push(newVersion);
+  state.versionIdx = LOANS[state.entity].versions.length - 1;
+
+  // Update version dropdown
+  const sel = document.getElementById('selVersion');
+  const opt = document.createElement('option');
+  opt.value = state.versionIdx;
+  opt.text = rLabel;
+  opt.selected = true;
+  sel.appendChild(opt);
+
+  closeModal();
+  renderSidebar();
+  onGenerate();
+}
+
+// ========================================================================
+// INIT
+// ========================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Ready
+  console.log('IDCOL Loan Repayment Engine loaded. Entities:', Object.keys(LOANS).join(', '));
+});
+</script>
+</body>
+</html>
