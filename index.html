@@ -263,6 +263,19 @@ function dailyAccrualForPeriod(startDate,endDate,startBalance,disbursements,base
   return rows;
 }
 
+/* Daily breakdown for periods whose interest is workbook-supplied (override) or
+   deferred: distributes the period's interest evenly across its days on the
+   constant opening balance, so the daily rows sum EXACTLY to the period interest.
+   The displayed rate is the effective annual rate that reproduces that interest. */
+function dailyFromTotal(startDate,endDate,balance,totalInterest,basis){
+  const rows=[]; const days=endDate-startDate; if(days<=0) return rows;
+  const denom=balance*days/basis;
+  const rate=denom>0?totalInterest/denom:0;
+  const per=totalInterest/days;
+  for(let d=startDate;d<endDate;d++) rows.push({date:d,dow:dow(d),opening:balance,rate,daily:per,disb:0});
+  return rows;
+}
+
 function generateSchedule(P){
   const baseRate=P.interest_rate, basis=P.day_count_basis;
   const intGrace=P.interest_grace_period_end, priGrace=P.principal_grace_period_end;
@@ -326,6 +339,11 @@ function generateSchedule(P){
           accrued+=ab*(adj.rate??periodRate)*(adj.days??0)/basis;
         }
       }
+      // fold any day-count adjustment into the daily rows so they sum to the period interest
+      if(dailyRows.length){
+        const dsum=dailyRows.reduce((a,x)=>a+x.daily,0), diff=accrued-dsum;
+        if(Math.abs(diff)>1e-6) dailyRows[dailyRows.length-1].daily+=diff;
+      }
       intDateAdvanced=true;
       if(isCapRow)capInterest=accrued; else interest=accrued;
     }
@@ -359,6 +377,9 @@ function generateSchedule(P){
     if(closeOverride)closingBal=closeOverride[i];
     cumInt+=interest; cumPri+=principal;
     const shownInt=capInterest+interest;
+    // Workbook-override or deferred periods have no formula accrual — synthesize an
+    // exact daily breakdown so every loan shows a daily schedule.
+    if(!dailyRows) dailyRows=dailyFromTotal(prevDate,payDate,openingBal,shownInt,basis);
 
     let tds;
     if(tdsMode==='annuity_pmt'&&ptype==='Annuity'&&annuityPmt!==null&&payDate>priGrace)tds=annuityPmt;
